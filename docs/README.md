@@ -10,7 +10,7 @@
 | [Authentication](authentication.md) | Developers | API keys, JWT, roles, RBAC table |
 | [Client Integration](client-integration.md) | Frontend Developers | Angular, Flutter, Stripe.js patterns |
 | [Webhooks](webhooks.md) | Developers / DevOps | Stripe webhook setup and event handling |
-| [Data Model](data-model.md) | Developers / DBA | All tables, columns, indexes, relationships |
+| [Data Model](data-model.md) | Developers / DBA | All tables, columns, indexes, relationships + ERD |
 | [Security](security.md) | Security / DevOps | Threat model, credential handling, checklist |
 | [Deployment](deployment.md) | DevOps | Docker, env vars, migrations, production checklist |
 | [Testing Guide](testing-guide.md) | Developers / QA | Test suite, Stripe test cards, lifecycle validation |

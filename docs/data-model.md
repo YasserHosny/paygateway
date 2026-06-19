@@ -2,6 +2,10 @@
 
 All tables use UUIDs as primary keys and `created_at` / `updated_at` timestamps (UTC).
 
+## Entity Relationship Diagram
+
+![PayGateway ERD](erd.svg)
+
 ---
 
 ## payments
