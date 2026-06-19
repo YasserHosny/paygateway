@@ -1,7 +1,7 @@
 # Integration Plan
 
 A step-by-step guide for embedding PayGateway into any platform.  
-Follow **Phase 0 → Phase 1 → your platform section → Phase 4**.
+Follow **Phase 0 → Phase 1 → your platform section → Phase 6 (testing) → Phase 7 (go live)**.
 
 ---
 
@@ -191,6 +191,15 @@ app.post('/webhooks/payment-update', express.raw({ type: 'application/json' }), 
 ```
 
 > PayGateway itself handles the Stripe webhook at `/api/v1/webhooks/stripe` and keeps its DB in sync. You only need your own webhook handler if you want to trigger additional business logic (send emails, update order state, etc.).
+
+---
+
+## The Golden Rule
+
+> **Your Stripe secret key (`sk_*`) and PayGateway API key (`X-API-Key`) must never leave your server.**  
+> Clients only receive the `client_secret` from a specific payment intent, which is scoped to one payment and cannot create new charges.
+
+PayGateway enforces this by design — clients call your backend, not PayGateway directly.
 
 ---
 
@@ -714,7 +723,70 @@ async def charge_subscription(customer_id: str, payment_method_id: str, amount: 
 
 ---
 
-## Phase 3 — Testing (All Platforms)
+## Phase 3 — Refunds
+
+Refunds are initiated server-side only — never expose refund capability to end users directly.
+
+```http
+POST /api/v1/payments/{payment_id}/refund
+X-API-Key: pgw_live_...
+Idempotency-Key: refund-order-1001-v1
+Content-Type: application/json
+
+{
+  "amount": 1000,
+  "reason": "customer_request"
+}
+```
+
+Omit `amount` to refund the full remaining balance. Valid `reason` values: `customer_request`, `duplicate`, `fraudulent`.
+
+---
+
+## Phase 4 — Error Handling
+
+Map PayGateway error codes to user-facing messages in your client:
+
+```typescript
+try {
+  const payment = await fetch('/api/payments/create', { method: 'POST', ... });
+} catch (err: any) {
+  const code = err.error?.detail?.error?.code;
+  switch (code) {
+    case 'RATE_LIMITED':
+      showError('Too many requests — please wait a moment and try again.');
+      break;
+    case 'PROVIDER_ERROR':
+      showError('Payment processor unavailable — please try again shortly.');
+      break;
+    case 'IDEMPOTENCY_KEY_MISSING':
+      // Bug in your client — Idempotency-Key header not sent
+      break;
+    case 'PAYMENT_NOT_FOUND':
+      showError('Payment not found.');
+      break;
+    default:
+      showError('Something went wrong. Please try again.');
+  }
+}
+```
+
+### Stripe Failure Codes
+
+When a charge is declined, check `failure_code` and `failure_message` on the payment object:
+
+| `failure_code` | User-Friendly Message |
+|---|---|
+| `card_declined` | Your card was declined. Please try a different card. |
+| `insufficient_funds` | Insufficient funds. Please try a different card. |
+| `expired_card` | Your card has expired. Please update your card details. |
+| `incorrect_cvc` | Incorrect security code. Please check and try again. |
+| `processing_error` | A processing error occurred. Please try again. |
+| `do_not_honor` | Your card was declined. Please contact your bank. |
+
+---
+
+## Phase 6 — Testing (All Platforms)
 
 Before going to production, validate the full flow end-to-end in test mode.
 
@@ -743,7 +815,7 @@ Before going to production, validate the full flow end-to-end in test mode.
 
 ---
 
-## Phase 4 — Go Live
+## Phase 7 — Go Live
 
 ### Pre-Launch Checklist
 
